@@ -6,14 +6,23 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import PageHeader from "@/components/PageHeader";
+import { useAuth } from "@/auth/AuthContext";
 import { useState } from "react";
 
 const DoctorProfile = () => {
+  const { user, doctorParticulars } = useAuth();
   const [chatbotEnabled, setChatbotEnabled] = useState(true);
   const [tone, setTone] = useState("friendly");
   const [language, setLanguage] = useState("en");
   const [emailNotif, setEmailNotif] = useState(true);
   const [pushNotif, setPushNotif] = useState(true);
+  const displayName = user?.name ?? "Doctor";
+  const initials = displayName
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div>
@@ -27,25 +36,30 @@ const DoctorProfile = () => {
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">SA</div>
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
+                {initials}
+              </div>
               <div>
-                <h3 className="font-semibold text-foreground text-lg">Dr. Sarah Ahmed</h3>
+                <h3 className="font-semibold text-foreground text-lg">{displayName}</h3>
                 <p className="text-sm text-muted-foreground">Internal Medicine Specialist</p>
               </div>
             </div>
             <Separator />
             <div className="space-y-3 text-sm">
               <div className="flex items-center gap-3 text-muted-foreground">
-                <Building2 className="h-4 w-4" /> City General Hospital – Department of Internal Medicine
+                <Building2 className="h-4 w-4" />{" "}
+                {doctorParticulars?.hospital && doctorParticulars?.department
+                  ? `${doctorParticulars.hospital} – ${doctorParticulars.department}`
+                  : "Complete onboarding to add hospital and department"}
               </div>
               <div className="flex items-center gap-3 text-muted-foreground">
-                <Mail className="h-4 w-4" /> dr.sarah@citygeneral.med
+                <Mail className="h-4 w-4" /> {user?.email ?? "doctor@example.com"}
               </div>
               <div className="flex items-center gap-3 text-muted-foreground">
-                <Phone className="h-4 w-4" /> +966 50 123 4567
+                <Phone className="h-4 w-4" /> {doctorParticulars?.phone || "Add phone number"}
               </div>
               <div className="flex items-center gap-3 text-muted-foreground">
-                <Award className="h-4 w-4" /> License: MD-2019-45892
+                <Award className="h-4 w-4" /> License: {doctorParticulars?.licenseNumber || "Add license number"}
               </div>
             </div>
           </CardContent>
@@ -116,7 +130,9 @@ const DoctorProfile = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="ar">Arabic</SelectItem>
+                    <SelectItem value="zh">Chinese</SelectItem>
+                    <SelectItem value="ms">Malay</SelectItem>
+                    <SelectItem value="ta">Tamil</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

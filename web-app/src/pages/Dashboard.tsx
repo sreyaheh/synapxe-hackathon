@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import PageHeader from "@/components/PageHeader";
+import { useAuth } from "@/auth/AuthContext";
 
 const stats = [
   { label: "Patients Today", value: "12", icon: Users, color: "text-primary" },
@@ -19,9 +20,16 @@ const appointments = [
 ];
 
 const Dashboard = () => {
+  const { user, doctorParticulars } = useAuth();
+  const subtitleParts = [doctorParticulars?.hospital, doctorParticulars?.department].filter(Boolean);
+  const subtitle = subtitleParts.length > 0 ? subtitleParts.join(" · ") : "Complete doctor particulars";
+
   return (
     <div>
-      <PageHeader title="Welcome back, Dr. Sarah" subtitle="City General Hospital · Internal Medicine" />
+      <PageHeader
+        title={`Welcome back, ${user?.name ?? "Doctor"}`}
+        subtitle={subtitle}
+      />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

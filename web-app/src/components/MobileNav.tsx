@@ -1,8 +1,9 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, ClipboardList, History, UserCog, Menu } from "lucide-react";
+import { LayoutDashboard, ClipboardList, History, UserCog, Menu, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { useAuth } from "@/auth/AuthContext";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -13,6 +14,7 @@ const navItems = [
 
 const MobileNav = () => {
   const [open, setOpen] = useState(false);
+  const { user, logout } = useAuth();
 
   return (
     <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card">
@@ -52,6 +54,22 @@ const MobileNav = () => {
                 {item.label}
               </NavLink>
             ))}
+
+            <div className="px-4 pt-4 mt-2 border-t border-sidebar-border/60">
+              <p className="text-xs text-sidebar-foreground/60 mb-2">
+                Signed in as {user?.name ?? "Doctor"}
+              </p>
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  logout();
+                }}
+                className="inline-flex items-center gap-2 text-sm text-sidebar-foreground/80 hover:text-sidebar-primary"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </button>
+            </div>
           </nav>
         </SheetContent>
       </Sheet>

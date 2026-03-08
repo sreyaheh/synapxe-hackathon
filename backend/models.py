@@ -12,6 +12,10 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     role = Column(String, nullable=False)  # doctor or patient
     full_name = Column(String, nullable=False)
+    doctor_hospital = Column(String)
+    doctor_department = Column(String)
+    doctor_phone = Column(String)
+    doctor_license = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 

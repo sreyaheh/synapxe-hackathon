@@ -1,22 +1,114 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChatbotDialog } from '@/components/chatbot-dialog';
+import { useAuth } from '@/hooks/use-auth';
 
-const sections = [
-  { label: 'Personal Information', detail: 'Name, DOB, Address', icon: 'person-outline' as const },
-  { label: 'Emergency Contact', detail: 'John Miller - Spouse', icon: 'phone' as const },
-  { label: 'Medical Conditions', detail: 'Type 2 Diabetes, Hypertension', icon: 'favorite-border' as const },
-  { label: 'Medication List', detail: '4 active medications', icon: 'medication' as const },
-  { label: 'Notification Settings', detail: 'Reminders enabled', icon: 'notifications-none' as const },
-  { label: 'Rewards & Points', detail: '75 points earned', icon: 'card-giftcard' as const },
+const MEDICAL_CONDITION_OPTIONS = [
+  'Hypertension',
+  'Diabetes',
+  'Asthma',
+  'High Cholesterol',
+  'Heart Disease',
+  'Kidney Disease',
+  'Thyroid Disorder',
 ];
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const [chatOpen, setChatOpen] = useState(false);
+  const { logout, user, needsProfileSetup, profileParticulars, completeProfileSetup } = useAuth();
+  const displayName = user?.name ?? 'Patient';
+  const avatarText = displayName.trim().charAt(0).toUpperCase() || 'P';
+  const patientCode = user?.id ? `#PH-${String(user.id).padStart(5, '0')}` : '#PH-00000';
+  const [showParticularsModal, setShowParticularsModal] = useState(false);
+  const [dob, setDob] = useState(profileParticulars?.dateOfBirth ?? '');
+  const [phone, setPhone] = useState(profileParticulars?.phone ?? '');
+  const [address, setAddress] = useState(profileParticulars?.address ?? '');
+  const [emergencyContact, setEmergencyContact] = useState(profileParticulars?.emergencyContact ?? '');
+  const [medicalConditions, setMedicalConditions] = useState<string[]>(profileParticulars?.medicalConditions ?? []);
+  const [medicationList, setMedicationList] = useState(profileParticulars?.medicationList ?? '');
+  const [showConditionsDropdown, setShowConditionsDropdown] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (needsProfileSetup) {
+      setShowParticularsModal(true);
+    }
+  }, [needsProfileSetup]);
+
+  const sections = [
+    {
+      label: 'Personal Information',
+      detail:
+        profileParticulars?.dateOfBirth && profileParticulars?.address
+          ? `DOB: ${profileParticulars.dateOfBirth} · ${profileParticulars.address}`
+          : 'Name, DOB, Address',
+      icon: 'person-outline' as const,
+    },
+    {
+      label: 'Emergency Contact',
+      detail: profileParticulars?.emergencyContact ?? 'Add emergency contact',
+      icon: 'phone' as const,
+    },
+    {
+      label: 'Medical Conditions',
+      detail:
+        profileParticulars?.medicalConditions && profileParticulars.medicalConditions.length > 0
+          ? profileParticulars.medicalConditions.join(', ')
+          : 'Add your medical conditions',
+      icon: 'favorite-border' as const,
+    },
+    {
+      label: 'Medication List',
+      detail: profileParticulars?.medicationList ?? 'Add your medication list',
+      icon: 'medication' as const,
+    },
+    {
+      label: 'Notification Settings',
+      detail: profileParticulars?.phone ? `Phone: ${profileParticulars.phone}` : 'Reminders enabled',
+      icon: 'notifications-none' as const,
+    },
+    {
+      label: 'Rewards & Points',
+      detail: '75 points earned',
+      icon: 'card-giftcard' as const,
+    },
+  ];
+
+  const handleSaveParticulars = () => {
+    if (
+      !dob.trim() ||
+      !phone.trim() ||
+      !address.trim() ||
+      !emergencyContact.trim() ||
+      medicalConditions.length === 0 ||
+      !medicationList.trim()
+    ) {
+      setSetupError('Please fill in all required fields.');
+      return;
+    }
+
+    completeProfileSetup({
+      dateOfBirth: dob.trim(),
+      phone: phone.trim(),
+      address: address.trim(),
+      emergencyContact: emergencyContact.trim(),
+      medicalConditions,
+      medicationList: medicationList.trim(),
+    });
+    setSetupError(null);
+    setShowConditionsDropdown(false);
+    setShowParticularsModal(false);
+  };
+
+  const toggleCondition = (condition: string) => {
+    setMedicalConditions((current) =>
+      current.includes(condition) ? current.filter((item) => item !== condition) : [...current, condition]
+    );
+  };
 
   return (
     <>
@@ -35,13 +127,17 @@ export default function ProfileScreen() {
           showsVerticalScrollIndicator={false}>
           <View style={styles.hero}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>S</Text>
+              <Text style={styles.avatarText}>{avatarText}</Text>
             </View>
-            <Text style={styles.name}>Sarah Johnson</Text>
-            <Text style={styles.patientId}>Patient ID: #PH-29481</Text>
+            <Text style={styles.name}>{displayName}</Text>
+            <Text style={styles.patientId}>Patient ID: {patientCode}</Text>
             <Pressable style={styles.editButton}>
               <MaterialIcons name="edit" size={15} color="#6f31c3" />
               <Text style={styles.editButtonText}>Edit Profile</Text>
+            </Pressable>
+            <Pressable style={styles.logoutButton} onPress={logout}>
+              <MaterialIcons name="logout" size={16} color="#ffffff" />
+              <Text style={styles.logoutButtonText}>Logout</Text>
             </Pressable>
           </View>
 
@@ -61,6 +157,92 @@ export default function ProfileScreen() {
       </View>
 
       <ChatbotDialog open={chatOpen} onClose={() => setChatOpen(false)} />
+
+      <Modal visible={showParticularsModal} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Complete Your Profile</Text>
+            <Text style={styles.modalSubtitle}>
+              Please provide your particulars before continuing to use the app.
+            </Text>
+
+            <TextInput
+              value={dob}
+              onChangeText={setDob}
+              placeholder="Date of birth (DD/MM/YYYY)"
+              placeholderTextColor="#8d87a1"
+              style={styles.modalInput}
+            />
+            <TextInput
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="Phone number"
+              placeholderTextColor="#8d87a1"
+              keyboardType="phone-pad"
+              style={styles.modalInput}
+            />
+            <TextInput
+              value={address}
+              onChangeText={setAddress}
+              placeholder="Home address"
+              placeholderTextColor="#8d87a1"
+              style={styles.modalInput}
+            />
+            <TextInput
+              value={emergencyContact}
+              onChangeText={setEmergencyContact}
+              placeholder="Emergency contact"
+              placeholderTextColor="#8d87a1"
+              style={styles.modalInput}
+            />
+            <View>
+              <Pressable style={styles.dropdownButton} onPress={() => setShowConditionsDropdown((prev) => !prev)}>
+                <Text style={[styles.dropdownButtonText, medicalConditions.length === 0 && styles.dropdownPlaceholder]}>
+                  {medicalConditions.length > 0
+                    ? medicalConditions.join(', ')
+                    : 'Medical conditions (select one or more)'}
+                </Text>
+                <MaterialIcons
+                  name={showConditionsDropdown ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+                  size={22}
+                  color="#6c6680"
+                />
+              </Pressable>
+
+              {showConditionsDropdown ? (
+                <View style={styles.dropdownMenu}>
+                  {MEDICAL_CONDITION_OPTIONS.map((option) => {
+                    const selected = medicalConditions.includes(option);
+                    return (
+                      <Pressable key={option} style={styles.dropdownItem} onPress={() => toggleCondition(option)}>
+                        <MaterialIcons
+                          name={selected ? 'check-box' : 'check-box-outline-blank'}
+                          size={19}
+                          color={selected ? '#7a35d5' : '#7b758c'}
+                        />
+                        <Text style={styles.dropdownItemText}>{option}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
+            </View>
+            <TextInput
+              value={medicationList}
+              onChangeText={setMedicationList}
+              placeholder="Medication list (e.g. Metformin, Atorvastatin)"
+              placeholderTextColor="#8d87a1"
+              style={styles.modalInput}
+            />
+
+            {setupError ? <Text style={styles.modalError}>{setupError}</Text> : null}
+
+            <Pressable style={styles.modalButton} onPress={handleSaveParticulars}>
+              <Text style={styles.modalButtonText}>Save particulars</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -172,6 +354,21 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
+  logoutButton: {
+    marginTop: 10,
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    backgroundColor: '#7a35d5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  logoutButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
   sectionCard: {
     borderRadius: 18,
     backgroundColor: '#fff',
@@ -206,5 +403,93 @@ const styles = StyleSheet.create({
     color: '#666073',
     fontSize: 14,
     marginTop: 2,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(24, 17, 38, 0.45)',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  modalCard: {
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    padding: 20,
+    gap: 10,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1f1a2b',
+  },
+  modalSubtitle: {
+    color: '#6c6680',
+    fontSize: 14,
+    marginBottom: 6,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#dfd8ee',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 15,
+    color: '#1f1a2b',
+    backgroundColor: '#fff',
+  },
+  dropdownButton: {
+    borderWidth: 1,
+    borderColor: '#dfd8ee',
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dropdownButtonText: {
+    flex: 1,
+    color: '#1f1a2b',
+    fontSize: 15,
+  },
+  dropdownPlaceholder: {
+    color: '#8d87a1',
+  },
+  dropdownMenu: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#e3d9f6',
+    borderRadius: 12,
+    backgroundColor: '#faf7ff',
+    paddingVertical: 6,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  dropdownItemText: {
+    color: '#2a2238',
+    fontSize: 14,
+  },
+  modalError: {
+    color: '#cc335f',
+    fontSize: 13,
+    marginTop: 2,
+  },
+  modalButton: {
+    marginTop: 6,
+    borderRadius: 12,
+    alignItems: 'center',
+    paddingVertical: 12,
+    backgroundColor: '#7a35d5',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

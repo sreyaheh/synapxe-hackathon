@@ -5,11 +5,14 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChatbotDialog } from '@/components/chatbot-dialog';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [chatOpen, setChatOpen] = useState(false);
+  const { user } = useAuth();
+  const displayName = user?.name ?? 'Patient';
 
   return (
     <>
@@ -24,9 +27,9 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.greeting}>
-            <Text style={styles.greetingSmall}>Good Morning,</Text>
+            <Text style={styles.greetingSmall}>Hello,</Text>
             <Text style={styles.greetingName}>
-              Sarah <Text style={styles.wave}>👋</Text>
+              {displayName} <Text style={styles.wave}>👋</Text>
             </Text>
             <Text style={styles.greetingSub}>Here are your upcoming appointments</Text>
           </View>
