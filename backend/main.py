@@ -14,7 +14,13 @@ from sqlalchemy.orm import Session
 from database import Base, engine, get_db
 import models
 
+from langdetect import detect
+
 app = FastAPI()
+# Create tables
+Base.metadata.create_all(bind=engine)
+
+
 security = HTTPBearer(auto_error=False)
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-change-me")
@@ -235,3 +241,46 @@ def seed_doctor(db: Session = Depends(get_db)):
         "email": user.email,
         "password": "password123",
     }
+# -----------------------------
+# POST Doctor Note
+# -----------------------------
+@app.post("/doctor/notes/{patient_id}")
+def add_doctor_note(
+    patient_id: int,
+    note: models.DoctorNoteCreate,
+    db: Session = Depends(get_db)
+):
+
+    detected_language = detect(note.note)
+
+    new_note = models.DoctorNote(
+        patient_id=patient_id,
+        note=note.note,
+        language=detected_language
+    )
+
+    db.add(new_note)
+    db.commit()
+    db.refresh(new_note)
+
+    return {
+        "message": "Doctor note added",
+        "language": detected_language
+    }
+
+
+# -----------------------------
+# GET Patient Summary
+# -----------------------------
+@app.get("/doctor/summary/{patient_id}")
+def get_patient_summary(
+    patient_id: int,
+    db: Session = Depends(get_db)
+):
+
+    notes = db.query(models.DoctorNote).filter(
+        models.DoctorNote.patient_id == patient_id
+    ).all()
+
+    return notes
+

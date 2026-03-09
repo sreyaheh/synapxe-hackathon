@@ -2,7 +2,7 @@ from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, T
 from sqlalchemy.sql import func
 
 from database import Base
-
+from pydantic import BaseModel
 
 class User(Base):
     __tablename__ = "users"
@@ -73,3 +73,16 @@ class DailyLog(Base):
     question = Column(String, nullable=False)
     answer_yes = Column(Boolean, nullable=False)
     logged_at = Column(DateTime(timezone=True), server_default=func.now())
+
+# database table
+class DoctorNote(Base):
+    __tablename__ = "doctor_notes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer)
+    note = Column(Text)
+    language = Column(String)
+
+#Request schema
+class DoctorNoteCreate(BaseModel):
+    note: str
