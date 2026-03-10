@@ -15,6 +15,7 @@ from database import Base, engine, get_db
 import models
 
 from langdetect import detect
+from chatbot import chat
 
 app = FastAPI()
 # Create tables
@@ -284,3 +285,14 @@ def get_patient_summary(
 
     return notes
 
+# -----------------------------
+# POST Chat (Sadhana)
+# -----------------------------
+class ChatRequest(BaseModel):
+    patient_id: str
+    message: str
+
+@app.post("/chat")
+async def chat_endpoint(request: ChatRequest):
+    response = chat(request.patient_id, request.message)
+    return {"response": response}
