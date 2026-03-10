@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, ActivityIndicator } from 'react-native';
+import { sendChatMessage } from '../services/chatService';
 
 type Message = { id: number; from: 'bot' | 'user'; text: string };
 
@@ -7,34 +8,53 @@ const initialMessages: Message[] = [
   {
     id: 1,
     from: 'bot',
-    text: "Hi Sarah! I'm your healthcare assistant. Ask me about appointments, medications, or your records.",
+    text: "Hello! I'm your AI health companion. I can help you with health concerns in English, Mandarin, Tamil or Malay. How are you feeling today?",
   },
 ];
 
 interface ChatbotDialogProps {
   open: boolean;
   onClose: () => void;
+  patientId?: string;
 }
 
-export function ChatbotDialog({ open, onClose }: ChatbotDialogProps) {
+export function ChatbotDialog({ open, onClose, patientId = 'patient_' + Date.now() }: ChatbotDialogProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const canSend = useMemo(() => input.trim().length > 0, [input]);
+  const canSend = useMemo(() => input.trim().length > 0 && !isLoading, [input, isLoading]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!canSend) return;
+
     const userMessage: Message = { id: Date.now(), from: 'user', text: input.trim() };
-    setMessages((prev) => [
-      ...prev,
-      userMessage,
-      {
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      // Call your real chatbot backend!
+      const botResponse = await sendChatMessage(patientId, userMessage.text);
+
+      const botMessage: Message = {
         id: Date.now() + 1,
         from: 'bot',
-        text: "Thanks for your message. I'm in demo mode now, but this is where we can connect to your healthcare assistant backend.",
-      },
-    ]);
-    setInput('');
+        text: botResponse,
+      };
+
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage: Message = {
+        id: Date.now() + 1,
+        from: 'bot',
+        text: "I'm sorry, I'm having trouble connecting right now. Please make sure you're connected to the internet and try again.",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -62,6 +82,13 @@ export function ChatbotDialog({ open, onClose }: ChatbotDialogProps) {
                 </View>
               </View>
             ))}
+            {isLoading && (
+              <View style={[styles.bubbleRow, styles.botRow]}>
+                <View style={[styles.bubble, styles.botBubble]}>
+                  <ActivityIndicator size="small" color="#7a35d5" />
+                </View>
+              </View>
+            )}
           </ScrollView>
 
           <View style={styles.inputRow}>
@@ -73,8 +100,13 @@ export function ChatbotDialog({ open, onClose }: ChatbotDialogProps) {
               onChangeText={setInput}
               onSubmitEditing={handleSend}
               returnKeyType="send"
+              editable={!isLoading}
             />
-            <Pressable style={[styles.sendButton, !canSend && styles.sendButtonDisabled]} onPress={handleSend}>
+            <Pressable 
+              style={[styles.sendButton, !canSend && styles.sendButtonDisabled]} 
+              onPress={handleSend}
+              disabled={!canSend}
+            >
               <Text style={styles.sendButtonText}>Send</Text>
             </Pressable>
           </View>
